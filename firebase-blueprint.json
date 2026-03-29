@@ -1,0 +1,39 @@
+{
+  "entities": {
+    "MasterPrompt": {
+      "title": "Master Prompt",
+      "description": "A system instruction template for the AI generator.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the prompt template." },
+        "content": { "type": "string", "description": "The full text of the master prompt." },
+        "isActive": { "type": "boolean", "description": "Whether this prompt is currently active." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp." }
+      },
+      "required": ["name", "content", "isActive"]
+    },
+    "Generation": {
+      "title": "Generation",
+      "description": "A set of generated scene prompts based on a script.",
+      "type": "object",
+      "properties": {
+        "script": { "type": "string", "description": "The input script provided by the user." },
+        "characterRef": { "type": "string", "description": "Optional character reference description." },
+        "prompts": { "type": "array", "items": { "type": "string" }, "description": "The generated cinematic scene prompts." },
+        "promptId": { "type": "string", "description": "The ID of the master prompt used for this generation." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp." }
+      },
+      "required": ["script", "prompts", "promptId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/master_prompts/{promptId}": {
+      "schema": "MasterPrompt",
+      "description": "Collection of master prompt templates."
+    },
+    "/generations/{generationId}": {
+      "schema": "Generation",
+      "description": "Collection of generated scene outputs."
+    }
+  }
+}

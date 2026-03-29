@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Scene Engine: Documentary Scene Generator</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="Cinematic scene prompt generator for high-end true-crime and investigative documentaries." />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Apple Touch Optimization -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Scene Engine" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker registered:', reg))
+            .catch(err => console.log('Service Worker registration failed:', err));
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

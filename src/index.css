@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  --bg: #0a0a0a;
+  --ink: #e0e0e0;
+  --line: #222222;
+  --accent: #1e40af; /* Deep blue accent */
+  --accent-light: #3b82f6;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  overflow-x: hidden;
+}
+
+.data-row {
+  display: grid;
+  grid-template-columns: 40px 1.5fr 1fr 1fr;
+  padding: 1rem;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+}
+
+.data-row:hover {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.col-header {
+  font-family: 'Georgia', serif;
+  font-style: italic;
+  font-size: 11px;
+  opacity: 0.5;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.data-value {
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.input-field {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 0.5rem;
+  border-radius: 4px;
+  width: 100%;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: opacity 0.2s;
+}
+
+.btn-primary:hover {
+  opacity: 0.8;
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+

@@ -1,0 +1,9 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="100" fill="black"/>
+  <path d="M160 180C160 168.954 168.954 160 180 160H332C343.046 160 352 168.954 352 180V332C352 343.046 343.046 352 332 352H180C168.954 352 160 343.046 160 332V180Z" stroke="white" stroke-width="20"/>
+  <circle cx="256" cy="256" r="60" fill="white"/>
+  <circle cx="310" cy="202" r="15" fill="#FF0000">
+    <animate attributeName="opacity" values="1;0.2;1" dur="2s" repeatCount="indefinite" />
+  </circle>
+  <text x="50%" y="450" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="40" font-weight="bold" letter-spacing="10">SCENE ENGINE</text>
+</svg>
