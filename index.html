@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Scene Engine: Documentary Scene Generator</title>
     
-    <!-- PWA Meta Tags -->
+    <!-- Meta Tags -->
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="Cinematic scene prompt generator for high-end true-crime and investigative documentaries." />
-    <link rel="manifest" href="/manifest.json" />
     
     <!-- Apple Touch Optimization -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -18,27 +17,7 @@
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    
-    <!-- Service Worker Registration -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('Service Worker registered:', reg))
-            .catch(err => console.log('Service Worker registration failed:', err));
-        });
-      }
-    </script>
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/site.webmanifest">
-<meta name="msapplication-TileColor" content="#6366f1">
-<meta name="theme-color" content="#6366f1">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Scene Generate">
-</head>
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

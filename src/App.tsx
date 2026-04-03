@@ -1,18 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { 
-  auth, db, onAuthStateChanged, 
+  auth, db, onAuthStateChanged, login, logout,
   collection, addDoc, query, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, orderBy, limit,
-  testFirestoreConnection
+  testFirestoreConnection, where, setDoc
 } from './firebase';
 import { 
   Plus, Settings, History, Play, Save, Copy,
   ChevronRight, User, Loader2, AlertCircle, 
   CheckCircle2, FileText, Cpu, LayoutDashboard, Menu, X,
-  Download, Trash2
+  Download, Trash2, Home, LogOut, LogIn
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Markdown from 'react-markdown';
+import { motion, AnimatePresence } from 'motion/react';
+import { User as FirebaseUser } from 'firebase/auth';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -129,14 +129,16 @@ Netflix True-Crime, HBO Documentary, Gritty Investigative Journalism.)`;
 // --- Components ---
 
 export default function App() {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [activeTab, setActiveTab] = useState<'generator' | 'prompts' | 'history'>('generator');
   const [masterPrompts, setMasterPrompts] = useState<MasterPrompt[]>([]);
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Persistent Generator State (Lifting state to prevent loss on tab change)
+  // Persistent Generator State
   const [script, setScript] = useState('');
   const [charRef, setCharRef] = useState('');
   const [result, setResult] = useState<string | null>(null);
@@ -146,14 +148,45 @@ export default function App() {
     testFirestoreConnection();
   }, []);
 
+  // Auth Listener
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+      if (u) {
+        // Update user profile in Firestore
+        try {
+          await setDoc(doc(db, 'users', u.uid), {
+            name: u.displayName,
+            email: u.email,
+            photoUrl: u.photoURL,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+          
+          // Check for admin role
+          const isAdminUser = u.email === "rainderzoneoffers@gmail.com";
+          setIsAdmin(isAdminUser);
+        } catch (err) {
+          console.error("User profile sync error:", err);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
   // Data Listeners
   useEffect(() => {
+    if (!user) return;
+
     const qPrompts = query(collection(db, 'master_prompts'), orderBy('updatedAt', 'desc'));
     const unsubPrompts = onSnapshot(qPrompts, (snap) => {
       const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MasterPrompt));
       setMasterPrompts(data);
       
-      if (data.length === 0) {
+      // Only admin can seed default prompt if empty
+      if (data.length === 0 && isAdmin) {
         addDoc(collection(db, 'master_prompts'), {
           name: "Standard True-Crime Generator",
           content: DEFAULT_MASTER_PROMPT,
@@ -161,29 +194,85 @@ export default function App() {
           updatedAt: serverTimestamp()
         });
       }
-      setLoading(false);
     }, (err) => {
-      console.error("Firestore Error:", err);
-      setLoading(false);
+      console.error("Firestore Prompts Error:", err);
     });
 
-    const qGens = query(collection(db, 'generations'), orderBy('createdAt', 'desc'), limit(20));
+    const qGens = query(
+      collection(db, 'generations'), 
+      where('uid', '==', user.uid),
+      orderBy('createdAt', 'desc'), 
+      limit(20)
+    );
     const unsubGens = onSnapshot(qGens, (snap) => {
       setGenerations(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Generation)));
+    }, (err) => {
+      console.error("Firestore Generations Error:", err);
     });
 
     return () => {
       unsubPrompts();
       unsubGens();
     };
-  }, []);
+  }, [user, isAdmin]);
 
   const activePrompt = useMemo(() => masterPrompts.find(p => p.isActive) || masterPrompts[0], [masterPrompts]);
+
+  const handleLogin = async () => {
+    try {
+      await login();
+    } catch (err) {
+      console.error("Login failed:", err);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setActiveTab('generator');
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
         <Loader2 className="w-8 h-8 animate-spin text-[#1e40af]" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0a] p-4 text-center">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-md w-full glass-panel p-8 flex flex-col gap-8"
+        >
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-[#1e40af]/20 flex items-center justify-center border border-[#1e40af]/30">
+              <img src="/favicon.svg" className="w-10 h-10" alt="Logo" referrerPolicy="no-referrer" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tighter uppercase">Scene Engine v1.0</h1>
+            <p className="text-xs text-gray-500 max-w-[250px]">
+              Cinematic scene prompt generator for high-end documentary filmmaking.
+            </p>
+          </div>
+
+          <button 
+            onClick={handleLogin}
+            className="btn-primary w-full flex items-center justify-center gap-3 py-4 uppercase tracking-widest text-sm"
+          >
+            <LogIn className="w-5 h-5" />
+            Sign in with Google
+          </button>
+
+          <p className="text-[10px] text-gray-600 uppercase tracking-widest">
+            Secure Authentication Required
+          </p>
+        </motion.div>
       </div>
     );
   }
@@ -197,7 +286,10 @@ export default function App() {
     <div className="min-h-screen flex flex-col md:flex-row bg-[#0a0a0a] text-[#e0e0e0]">
       {/* Mobile Header */}
       <header className="md:hidden flex items-center justify-between p-4 border-b border-[#222222] bg-[#0a0a0a] sticky top-0 z-50">
-        <div className="flex items-center gap-2">
+        <div 
+          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => handleTabChange('generator')}
+        >
           <img src="/favicon.svg" className="w-6 h-6 rounded-md" alt="Logo" referrerPolicy="no-referrer" />
           <span className="font-bold tracking-tighter uppercase text-xs">Scene Engine</span>
         </div>
@@ -218,7 +310,10 @@ export default function App() {
               !isSidebarOpen && "hidden md:flex"
             )}
           >
-            <div className="hidden md:flex items-center gap-3 px-2">
+            <div 
+              className="hidden md:flex items-center gap-3 px-2 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => handleTabChange('generator')}
+            >
               <img src="/favicon.svg" className="w-8 h-8 rounded-lg" alt="Logo" referrerPolicy="no-referrer" />
               <span className="font-bold tracking-tighter uppercase text-sm">Scene Engine v1.0</span>
             </div>
@@ -227,15 +322,23 @@ export default function App() {
               <NavButton 
                 active={activeTab === 'generator'} 
                 onClick={() => handleTabChange('generator')}
+                icon={<Home className="w-4 h-4" />}
+                label="Home"
+              />
+              <NavButton 
+                active={activeTab === 'generator'} 
+                onClick={() => handleTabChange('generator')}
                 icon={<LayoutDashboard className="w-4 h-4" />}
                 label="Generator"
               />
-              <NavButton 
-                active={activeTab === 'prompts'} 
-                onClick={() => handleTabChange('prompts')}
-                icon={<Settings className="w-4 h-4" />}
-                label="Prompt Manager"
-              />
+              {isAdmin && (
+                <NavButton 
+                  active={activeTab === 'prompts'} 
+                  onClick={() => handleTabChange('prompts')}
+                  icon={<Settings className="w-4 h-4" />}
+                  label="Prompt Manager"
+                />
+              )}
               <NavButton 
                 active={activeTab === 'history'} 
                 onClick={() => handleTabChange('history')}
@@ -246,14 +349,25 @@ export default function App() {
 
             <div className="mt-auto pt-4 border-t border-[#222222]">
               <div className="flex items-center gap-3 px-2 mb-4">
-                <div className="w-8 h-8 rounded-full bg-[#222222] flex items-center justify-center overflow-hidden">
-                  <User className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-full bg-[#222222] flex items-center justify-center overflow-hidden border border-white/10">
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt="User" referrerPolicy="no-referrer" />
+                  ) : (
+                    <User className="w-4 h-4" />
+                  )}
                 </div>
                 <div className="flex flex-col overflow-hidden">
-                  <span className="text-xs font-bold truncate">System User</span>
-                  <span className="text-[10px] text-gray-500 truncate">Local Session</span>
+                  <span className="text-xs font-bold truncate">{user.displayName || "User"}</span>
+                  <span className="text-[10px] text-gray-500 truncate">{isAdmin ? "Administrator" : "Standard User"}</span>
                 </div>
               </div>
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-3 px-3 py-2 rounded text-xs text-red-400 hover:bg-red-500/10 w-full transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </button>
             </div>
           </motion.aside>
         )}
@@ -274,6 +388,7 @@ export default function App() {
             setCharRef={setCharRef}
             result={result}
             setResult={setResult}
+            user={user}
           />
         )}
         {activeTab === 'prompts' && (
@@ -392,7 +507,8 @@ function GeneratorView({
   charRef,
   setCharRef,
   result,
-  setResult
+  setResult,
+  user
 }: { 
   activePrompt?: MasterPrompt, 
   onGenerateStart: () => void, 
@@ -403,7 +519,8 @@ function GeneratorView({
   charRef: string,
   setCharRef: (s: string) => void,
   result: string | null,
-  setResult: (s: string | null) => void
+  setResult: (s: string | null) => void,
+  user: FirebaseUser
 }) {
   const [error, setError] = useState<string | null>(null);
 
@@ -445,6 +562,7 @@ function GeneratorView({
         setResult(text);
         try {
           await addDoc(collection(db, 'generations'), {
+            uid: user.uid,
             script,
             characterRef: charRef,
             prompts: text,
@@ -587,7 +705,7 @@ function PromptManagerView({ prompts }: { prompts: MasterPrompt[] }) {
       });
       setEditingId(null);
     } catch (err) {
-      console.error(err);
+      await handleFirestoreError(err, 'update', `master_prompts/${editingId}`);
     }
   };
 
@@ -602,7 +720,7 @@ function PromptManagerView({ prompts }: { prompts: MasterPrompt[] }) {
       );
       await Promise.all(updates);
     } catch (err) {
-      console.error(err);
+      await handleFirestoreError(err, 'update', 'master_prompts/toggle');
     }
   };
 
@@ -618,7 +736,7 @@ function PromptManagerView({ prompts }: { prompts: MasterPrompt[] }) {
       setEditName("New Master Prompt");
       setEditContent(DEFAULT_MASTER_PROMPT);
     } catch (err) {
-      console.error(err);
+      await handleFirestoreError(err, 'create', 'master_prompts');
     }
   };
 

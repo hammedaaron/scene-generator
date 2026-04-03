@@ -1,17 +1,69 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Public access for this specific app's collections
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "rainderzoneoffers@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidMasterPrompt(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 10000 &&
+             data.isActive is bool;
+    }
+
+    function isValidGeneration(data) {
+      return data.uid == request.auth.uid &&
+             data.script is string && data.script.size() > 0 && data.script.size() < 10000 &&
+             data.prompts is string && data.prompts.size() > 0 &&
+             data.promptId is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
     match /master_prompts/{promptId} {
-      allow read, write: if true;
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidMasterPrompt(request.resource.data);
     }
 
     match /generations/{generationId} {
-      allow read, write: if true;
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidGeneration(request.resource.data);
+      allow update: if isDocOwner() && isValidGeneration(request.resource.data);
+      allow delete: if isDocOwner();
     }
     
     match /users/{userId} {
-      allow read, write: if true;
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && hasOnlyAllowedFields(['name', 'email', 'photoUrl', 'role', 'updatedAt']);
     }
   }
 }
